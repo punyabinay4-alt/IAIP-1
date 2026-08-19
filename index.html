@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pixel Image Encryption - IAIP</title>
+  <style>
+    body { font-family: Arial; background: #1e1e2f; color: white; padding: 20px; text-align: center; }
+ .box { background: #2e2e4e; padding: 25px; border-radius: 15px; max-width: 700px; margin: auto; }
+    input, button { padding: 10px; margin: 8px; border-radius: 8px; border: none; font-size: 15px; }
+    button { background: #00bfff; color: black; font-weight: bold; cursor: pointer; }
+    button:hover { background: #00a0dd; }
+ .clear-btn { background: #ff4d4d; color: white; }
+    canvas { max-width: 100%; border: 2px solid #00bfff; border-radius: 8px; margin-top: 10px; }
+ .images { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+ .img-box { text-align: center; }
+    a { color: #00bfff; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Pixel Manipulation for Image Encryption</h1>
+    <p>Project for Inten Alpha | Encrypt & Decrypt Images</p>
+
+    <input type="file" id="imageInput" accept="image/*"><br>
+    <input id="key" type="number" placeholder="Enter Secret Key 1-255" value="50"><br>
+
+    <button onclick="encryptImage()">Encrypt</button>
+    <button onclick="decryptImage()">Decrypt</button>
+    <button class="clear-btn" onclick="clearAll()">Clear</button>
+    <button onclick="downloadImage()">Download Result</button>
+
+    <div class="images">
+      <div class="img-box">
+        <h3>Original</h3>
+        <canvas id="originalCanvas"></canvas>
+      </div>
+      <div class="img-box">
+        <h3>Result</h3>
+        <canvas id="resultCanvas"></canvas>
+      </div>
+    </div>
+    
+    <br>
+    <h3>Download Python Code:</h3>
+    <a href="image_encryption.py" download>image_encryption.py</a>
+  </div>
+
+<script>
+let originalImgData = null;
+let currentResult = null;
+let ctx1 = document.getElementById('originalCanvas').getContext('2d');
+let ctx2 = document.getElementById('resultCanvas').getContext('2d');
+
+document.getElementById('imageInput').addEventListener('change', function(e) {
+  let file = e.target.files[0];
+  let reader = new FileReader();
+  reader.onload = function(event) {
+    let img = new Image();
+    img.onload = function() {
+      document.getElementById('originalCanvas').width = img.width;
+      document.getElementById('originalCanvas').height = img.height;
+      document.getElementById('resultCanvas').width = img.width;
+      document.getElementById('resultCanvas').height = img.height;
+      ctx1.drawImage(img, 0, 0);
+      originalImgData = ctx1.getImageData(0, 0, img.width, img.height);
+    }
+    img.src = event.target.result;
+  }
+  reader.readAsDataURL(file);
+});
+
+function processPixels(key, mode) {
+  if(!originalImgData) { alert("Please upload an image first"); return; }
+  let data = new Uint8ClampedArray(originalImgData.data);
+  key = parseInt(key) % 256;
+
+  for(let i=0; i<data.length; i+=4) {
+    // RGB pixels ko key se XOR karna = simple pixel manipulation
+    if(mode === 'encrypt') {
+      data[i] = data[i] ^ key; // R
+      data[i+1] = data[i+1] ^ key; // G 
+      data[i+2] = data[i+2] ^ key; // B
+    } else {
+      data[i] = data[i] ^ key; // R - XOR 2 baar karne se wapas original
+      data[i+1] = data[i+1] ^ key; // G
+      data[i+2] = data[i+2] ^ key; // B
+    }
+  }
+  let newImageData = new ImageData(data, originalImgData.width, originalImgData.height);
+  ctx2.putImageData(newImageData, 0, 0);
+  currentResult = newImageData;
+}
+
+function encryptImage() {
+  let key = document.getElementById('key').value;
+  processPixels(key, 'encrypt');
+}
+
+function decryptImage() {
+  let key = document.getElementById('key').value;
+  processPixels(key, 'decrypt');
+}
+
+function clearAll() {
+  ctx1.clearRect(0, 0, ctx1.canvas.width, ctx1.canvas.height);
+  ctx2.clearRect(0, 0, ctx2.canvas.width, ctx2.canvas.height);
+  document.getElementById('imageInput').value = "";
+  originalImgData = null;
+}
+
+function downloadImage() {
+  if(!currentResult) { alert("First Encrypt or Decrypt an image"); return; }
+  let link = document.createElement('a');
+  link.download = 'encrypted_image.png';
+  link.href = document.getElementById('resultCanvas').toDataURL();
+  link.click();
+}
+</script>
+</body>
+</html>
